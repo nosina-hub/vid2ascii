@@ -31,7 +31,7 @@ vid2ascii takes a local video file and renders it frame-by-frame as **rgb colore
 
 ## live demo
 
-👉 [yourusername.github.io/vid2ascii](https://nosina-hub.github.io/vid2ascii)
+👉 [nosina-hub.github.io/vid2ascii](https://nosina-hub.github.io/vid2ascii)
 
 ## how it works
 
