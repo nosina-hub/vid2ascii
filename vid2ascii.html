@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vid2ascii ✨</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink:     #f4a7c3;
+    --pink2:    #e879a0;
+    --blue:     #7eb8f7;
+    --blue2:    #3d8ef0;
+    --lavender: #c9b6e4;
+    --bg:       #0d0d18;
+    --bg2:      #13132a;
+    --bg3:      #1a1a35;
+    --text:     #f0eafa;
+    --muted:    #8888aa;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 15%, rgba(244,167,195,.08) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 85% 85%, rgba(126,184,247,.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 900px;
+    padding: 40px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  /* header */
+  header { text-align: center; }
+  .sparkle { font-family: var(--mono); font-size: 12px; color: var(--lavender); letter-spacing: .15em; margin-bottom: 10px; }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(22px, 5vw, 36px);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--pink), var(--lavender), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 8px;
+  }
+  .sub { color: var(--muted); font-size: 14px; }
+
+  /* drop zone */
+  .drop-zone {
+    width: 100%;
+    border: 2px dashed rgba(244,167,195,.3);
+    border-radius: 16px;
+    background: var(--bg2);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--pink);
+    background: rgba(244,167,195,.05);
+  }
+  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop-icon { font-size: 36px; margin-bottom: 10px; }
+  .drop-title { font-family: var(--mono); font-size: 14px; color: var(--pink); margin-bottom: 6px; }
+  .drop-sub { font-size: 13px; color: var(--muted); }
+
+  /* controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 10px;
+    padding: 8px 14px;
+  }
+  .ctrl-group label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .ctrl-group input[type=range] {
+    width: 90px;
+    accent-color: var(--pink);
+  }
+  .ctrl-group span { font-family: var(--mono); font-size: 12px; color: var(--pink); min-width: 28px; }
+  .ctrl-group select {
+    background: var(--bg3);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-pink { background: linear-gradient(135deg, var(--pink2), var(--lavender)); color: #fff; }
+  .btn-blue { background: linear-gradient(135deg, var(--blue2), var(--lavender)); color: #fff; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* terminal screen */
+  .terminal {
+    width: 100%;
+    background: #050510;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.07);
+    overflow: hidden;
+    display: none;
+  }
+  .terminal.visible { display: block; }
+
+  .term-bar {
+    background: var(--bg3);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .term-title { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .term-fps   { font-family: var(--mono); font-size: 11px; color: var(--lavender); margin-left: auto; }
+
+  #ascii-out {
+    font-family: var(--mono);
+    font-size: clamp(5px, 1.1vw, 9px);
+    line-height: 1.18;
+    white-space: pre;
+    display: block;
+    padding: 6px 4px;
+    overflow: hidden;
+    min-height: 200px;
+  }
+
+  /* progress */
+  .progress-wrap {
+    width: 100%;
+    background: var(--bg2);
+    border-radius: 99px;
+    height: 4px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-wrap.visible { display: block; }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--pink), var(--blue));
+    border-radius: 99px;
+    transition: width .1s;
+  }
+
+  /* playback buttons */
+  .playback {
+    display: none;
+    gap: 10px;
+    align-items: center;
+  }
+  .playback.visible { display: flex; }
+
+  .time-display {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="sparkle">ੈ✩‧₊˚ terminal art in your browser ˚₊‧✩ੈ</p>
+    <h1>vid2ascii</h1>
+    <p class="sub">upload a video and watch it play as colored ascii art 🩷</p>
+  </header>
+
+  <!-- drop zone -->
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept="video/*">
+    <div class="drop-icon">🎞️</div>
+    <p class="drop-title">drop a video here</p>
+    <p class="drop-sub">or click to browse — mp4, webm, mov, avi</p>
+  </div>
+
+  <!-- controls -->
+  <div class="controls" id="controls" style="display:none">
+    <div class="ctrl-group">
+      <label>cols</label>
+      <input type="range" id="cols-slider" min="40" max="180" value="100">
+      <span id="cols-val">100</span>
+    </div>
+    <div class="ctrl-group">
+      <label>ramp</label>
+      <select id="ramp-select">
+        <option value="short">simple</option>
+        <option value="long">detailed</option>
+        <option value="blocks">blocks</option>
+        <option value="dots">dots</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>fps cap</label>
+      <input type="range" id="fps-slider" min="5" max="60" value="30">
+      <span id="fps-val">30</span>
+    </div>
+    <div class="ctrl-group">
+      <label>vol</label>
+      <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="1">
+      <span id="vol-val">100%</span>
+    </div>
+    <button class="btn btn-pink" id="play-btn">▶ play</button>
+    <button class="btn btn-blue" id="stop-btn" disabled>■ stop</button>
+  </div>
+
+  <!-- playback info -->
+  <div class="playback" id="playback-row">
+    <span class="time-display" id="time-display">0:00 / 0:00</span>
+  </div>
+
+  <!-- progress bar -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- terminal screen -->
+  <div class="terminal" id="terminal">
+    <div class="term-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="term-title">vid2ascii.py</span>
+      <span class="term-fps" id="fps-display">0 fps</span>
+    </div>
+    <div id="ascii-out"></div>
+  </div>
+
+</div>
+
+<script>
+const RAMPS = {
+  short:  ' .:-=+*#%@',
+  long:   ' .`-_\',:;^=+/"|)<>iv%xclrs{*}I?!][1taeo7zjLunT#JCwfy325F6gpSD4VXbYkEZO0mqhd8PHQGUAlk@W$B#',
+  blocks: ' ░▒▓█',
+  dots:   ' ·•●',
+};
+
+const COLOR_SHIFT = 3; // 5-bit quantise
+
+let videoEl    = null;
+let rafId      = null;
+let running    = false;
+let lastFrameT = 0;
+let fpsSmooth  = 0;
+let frameCount = 0;
+let lastFpsT   = 0;
+
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('file-input');
+const controls   = document.getElementById('controls');
+const terminal   = document.getElementById('terminal');
+const asciiOut   = document.getElementById('ascii-out');
+const playBtn    = document.getElementById('play-btn');
+const stopBtn    = document.getElementById('stop-btn');
+const colsSlider = document.getElementById('cols-slider');
+const colsVal    = document.getElementById('cols-val');
+const fpsSlider  = document.getElementById('fps-slider');
+const fpsVal     = document.getElementById('fps-val');
+const rampSel    = document.getElementById('ramp-select');
+const fpsDisplay = document.getElementById('fps-display');
+const volSlider  = document.getElementById('vol-slider');
+const volVal     = document.getElementById('vol-val');
+const progressWrap = document.getElementById('progress-wrap');
+const progressBar  = document.getElementById('progress-bar');
+const playbackRow  = document.getElementById('playback-row');
+const timeDisplay  = document.getElementById('time-display');
+
+// canvas for pixel sampling
+const canvas = document.createElement('canvas');
+const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+// sliders
+colsSlider.addEventListener('input', () => { colsVal.textContent = colsSlider.value; });
+fpsSlider.addEventListener('input',  () => { fpsVal.textContent  = fpsSlider.value;  });
+volSlider.addEventListener('input',  () => {
+  volVal.textContent = Math.round(volSlider.value * 100) + '%';
+  if (videoEl) videoEl.volume = parseFloat(volSlider.value);
+});
+
+// drag and drop
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadVideo(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadVideo(fileInput.files[0]);
+});
+
+function loadVideo(file) {
+  if (videoEl) { videoEl.pause(); videoEl.src = ''; }
+  videoEl = document.createElement('video');
+  videoEl.src = URL.createObjectURL(file);
+  videoEl.muted = false;
+  videoEl.volume = parseFloat(volSlider.value);
+  videoEl.preload = 'auto';
+  videoEl.crossOrigin = 'anonymous';
+  videoEl.addEventListener('loadedmetadata', () => {
+    controls.style.display = 'flex';
+    dropZone.querySelector('.drop-title').textContent = '🎀 ' + file.name;
+    dropZone.querySelector('.drop-sub').textContent   = `${videoEl.duration.toFixed(1)}s — ready to play`;
+  });
+}
+
+playBtn.addEventListener('click', startRender);
+stopBtn.addEventListener('click', stopRender);
+
+function startRender() {
+  if (!videoEl) return;
+  running = true;
+  playBtn.disabled = true;
+  stopBtn.disabled = false;
+  terminal.classList.add('visible');
+  progressWrap.classList.add('visible');
+  playbackRow.classList.add('visible');
+  lastFrameT = 0; frameCount = 0; lastFpsT = performance.now();
+  videoEl.currentTime = 0;
+  videoEl.play().catch(() => {
+    // fallback: mute and retry if browser blocks unmuted autoplay
+    videoEl.muted = true;
+    videoEl.play();
+  });
+  rafId = requestAnimationFrame(renderLoop);
+}
+
+function stopRender() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  if (videoEl) videoEl.pause();
+  playBtn.disabled = false;
+  stopBtn.disabled = true;
+}
+
+function renderLoop(now) {
+  if (!running) return;
+
+  const fpsCap    = parseInt(fpsSlider.value);
+  const frameBudget = 1000 / fpsCap;
+
+  if (now - lastFrameT < frameBudget - 2) {
+    rafId = requestAnimationFrame(renderLoop);
+    return;
+  }
+
+  if (videoEl.ended) { stopRender(); return; }
+  if (videoEl.readyState < 2) {
+    rafId = requestAnimationFrame(renderLoop);
+    return;
+  }
+
+  const cols = parseInt(colsSlider.value);
+  const ramp = RAMPS[rampSel.value];
+
+  // figure out rows preserving aspect ratio (char cells ~0.5 aspect)
+  const CHAR_ASPECT = 0.5;
+  const vidW = videoEl.videoWidth  || 640;
+  const vidH = videoEl.videoHeight || 360;
+  const rows = Math.max(8, Math.round(cols * (vidH / vidW) * CHAR_ASPECT));
+
+  canvas.width  = cols;
+  canvas.height = rows;
+  ctx.drawImage(videoEl, 0, 0, cols, rows);
+
+  const data = ctx.getImageData(0, 0, cols, rows).data; // RGBA flat array
+
+  // build colored html (spans) — same logic as Python renderer
+  let html = '';
+  let prevR = -1, prevG = -1, prevB = -1;
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const base = (y * cols + x) * 4;
+      let r = data[base], g = data[base+1], b = data[base+2];
+
+      // quantise
+      const sh = COLOR_SHIFT;
+      r = (r >> sh) << sh;
+      g = (g >> sh) << sh;
+      b = (b >> sh) << sh;
+
+      const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+      const ci  = Math.floor(brightness / 255 * (ramp.length - 1));
+      const ch  = ramp[Math.min(ci, ramp.length - 1)];
+      const esc = (ch === '<') ? '&lt;' : (ch === '>') ? '&gt;' : (ch === '&') ? '&amp;' : ch;
+
+      if (r !== prevR || g !== prevG || b !== prevB) {
+        if (prevR !== -1) html += '</span>';
+        html += `<span style="color:rgb(${r},${g},${b})">`;
+        prevR = r; prevG = g; prevB = b;
+      }
+      html += esc;
+    }
+    html += '\n';
+  }
+  if (prevR !== -1) html += '</span>';
+
+  asciiOut.innerHTML = html;
+
+  // FPS counter
+  frameCount++;
+  if (now - lastFpsT >= 500) {
+    fpsSmooth = Math.round(frameCount / ((now - lastFpsT) / 1000));
+    fpsDisplay.textContent = fpsSmooth + ' fps';
+    frameCount = 0;
+    lastFpsT = now;
+  }
+
+  // progress
+  const pct = videoEl.duration ? (videoEl.currentTime / videoEl.duration * 100) : 0;
+  progressBar.style.width = pct + '%';
+
+  // time display
+  const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  timeDisplay.textContent = `${fmt(videoEl.currentTime)} / ${fmt(videoEl.duration||0)}`;
+
+  lastFrameT = now;
+  rafId = requestAnimationFrame(renderLoop);
+}
+</script>
+</body>
+</html>
